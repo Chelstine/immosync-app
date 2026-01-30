@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import AnnonceDetail from '@/components/annonces/AnnonceDetail';
 import Spinner from '@/components/ui/Spinner';
@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button';
 
 export default function AnnoncePage({ params }) {
     const router = useRouter();
-    const { id } = params;
+    const { id } = use(params);
     const [annonce, setAnnonce] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');

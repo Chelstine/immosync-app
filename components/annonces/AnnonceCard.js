@@ -12,8 +12,11 @@ export default function AnnonceCard({ annonce }) {
                 {annonce.Photo_Bien && annonce.Photo_Bien.length > 0 ? (
                     <img src={annonce.Photo_Bien[0].url} alt={title} className="w-full h-full object-cover" />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100 text-sm">
-                        Pas de photo
+                    <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100 text-sm flex-col">
+                        <svg className="h-8 w-8 mb-1 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                        </svg>
+                        <span>Pas de photo</span>
                     </div>
                 )}
                 <div className="absolute top-2 right-2 flex space-x-1">

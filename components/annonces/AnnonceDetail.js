@@ -24,7 +24,13 @@ export default function AnnonceDetail({ annonce }) {
                     {bien.Photos && bien.Photos.length > 0 ? (
                         <img src={bien.Photos[0].url} className="w-full h-full object-cover" alt="Main" />
                     ) : (
-                        <div className="flex items-center justify-center h-full text-gray-400 bg-gray-100">Pas de photos du bien</div>
+                        <div className="flex flex-col items-center justify-center h-full text-gray-500 bg-gray-100">
+                            <Home size={48} className="mb-2 text-gray-400" />
+                            <p>Aucune photo disponible</p>
+                            <p className="text-xs text-center mt-1 text-gray-400 px-4">
+                                (L'upload nécessite un compte Cloud Storage configuré)
+                            </p>
+                        </div>
                     )}
                 </div>
                 {/* Grid of other photos if any */}

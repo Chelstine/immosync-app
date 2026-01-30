@@ -8,8 +8,24 @@ import Link from 'next/link';
 export default function DashboardPage() {
     const [stats, setStats] = useState({ totalBiens: 0, totalAnnonces: 0, published: 0 });
 
-    // In a real app, fetch stats from API
-    // useEffect(() => { ... }, []);
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await fetch('/api/annonces');
+                if (res.ok) {
+                    const data = await res.json();
+                    setStats({
+                        totalBiens: data.annonces.length, // Approximation until we have separate biens endpoint logic
+                        totalAnnonces: data.annonces.length,
+                        published: data.annonces.filter(a => a.Publié_Facebook || a.Publié_SeLoger || a.Publié_LBC || a.Publié_BienIci).length
+                    });
+                }
+            } catch (error) {
+                console.error("Error fetching stats:", error);
+            }
+        };
+        fetchStats();
+    }, []);
 
     return (
         <div className="space-y-8">
@@ -32,7 +48,7 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between">
                         <div>
                             <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Biens Enregistrés</p>
-                            <h3 className="text-4xl font-extrabold text-blue-900 mt-2">--</h3>
+                            <h3 className="text-4xl font-extrabold text-blue-900 mt-2">{stats.totalBiens}</h3>
                         </div>
                         <div className="p-3 bg-blue-50 rounded-xl text-blue-600">
                             <Home size={28} />
@@ -44,7 +60,7 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between">
                         <div>
                             <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Annonces Générées</p>
-                            <h3 className="text-4xl font-extrabold text-indigo-900 mt-2">--</h3>
+                            <h3 className="text-4xl font-extrabold text-indigo-900 mt-2">{stats.totalAnnonces}</h3>
                         </div>
                         <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
                             <TrendingUp size={28} />
@@ -56,7 +72,7 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between">
                         <div>
                             <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Diffusées en Ligne</p>
-                            <h3 className="text-4xl font-extrabold text-green-700 mt-2">--</h3>
+                            <h3 className="text-4xl font-extrabold text-green-700 mt-2">{stats.published}</h3>
                         </div>
                         <div className="p-3 bg-green-50 rounded-xl text-green-600">
                             <CheckCircle size={28} />

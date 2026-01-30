@@ -9,7 +9,7 @@ export async function GET(req) {
 
     try {
         const annonces = await getAnnonces(session.user.email);
-        return NextResponse.json(annonces);
+        return NextResponse.json({ annonces });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch annonces' }, { status: 500 });
     }

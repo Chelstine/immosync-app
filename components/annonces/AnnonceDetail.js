@@ -102,6 +102,8 @@ function PublicationSection({ annonce }) {
     const [platforms, setPlatforms] = useState({
         facebook: false,
         seloger: false,
+        lbc: false,
+        bienici: false
     });
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState(null);
@@ -132,7 +134,7 @@ function PublicationSection({ annonce }) {
     return (
         <div className="space-y-4">
             <div className="space-y-3">
-                <label className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-50 rounded transition-colors">
+                <label className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-50 rounded transition-colors border border-transparent hover:border-gray-200">
                     <input
                         type="checkbox"
                         checked={platforms.facebook}
@@ -144,16 +146,43 @@ function PublicationSection({ annonce }) {
                         {annonce.Publié_Facebook ? <><Check size={16} className="mr-1" /> Sur Facebook Marketplace</> : "Facebook Marketplace"}
                     </span>
                 </label>
-                <label className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-50 rounded transition-colors">
+
+                <label className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-50 rounded transition-colors border border-transparent hover:border-gray-200">
+                    <input
+                        type="checkbox"
+                        checked={platforms.lbc}
+                        onChange={(e) => setPlatforms({ ...platforms, lbc: e.target.checked })}
+                        className="h-5 w-5 text-orange-600 rounded border-gray-300 focus:ring-orange-500"
+                        disabled={annonce.Publié_LBC}
+                    />
+                    <span className={annonce.Publié_LBC ? "text-green-600 font-medium flex items-center" : "text-gray-700 font-medium"}>
+                        {annonce.Publié_LBC ? <><Check size={16} className="mr-1" /> Sur Le Bon Coin</> : "Le Bon Coin"}
+                    </span>
+                </label>
+
+                <label className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-50 rounded transition-colors border border-transparent hover:border-gray-200">
                     <input
                         type="checkbox"
                         checked={platforms.seloger}
                         onChange={(e) => setPlatforms({ ...platforms, seloger: e.target.checked })}
-                        className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        className="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500"
                         disabled={annonce.Publié_SeLoger}
                     />
                     <span className={annonce.Publié_SeLoger ? "text-green-600 font-medium flex items-center" : "text-gray-700 font-medium"}>
-                        {annonce.Publié_SeLoger ? <><Check size={16} className="mr-1" /> Sur SeLoger</> : "SeLoger"}
+                        {annonce.Publié_SeLoger ? <><Check size={16} className="mr-1" /> Sur SeLoger / MeilleursAgents</> : "SeLoger"}
+                    </span>
+                </label>
+
+                <label className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-50 rounded transition-colors border border-transparent hover:border-gray-200">
+                    <input
+                        type="checkbox"
+                        checked={platforms.bienici}
+                        onChange={(e) => setPlatforms({ ...platforms, bienici: e.target.checked })}
+                        className="h-5 w-5 text-yellow-600 rounded border-gray-300 focus:ring-yellow-500"
+                        disabled={annonce.Publié_BienIci}
+                    />
+                    <span className={annonce.Publié_BienIci ? "text-green-600 font-medium flex items-center" : "text-gray-700 font-medium"}>
+                        {annonce.Publié_BienIci ? <><Check size={16} className="mr-1" /> Sur Bien'ici</> : "Bien'ici"}
                     </span>
                 </label>
             </div>
@@ -167,7 +196,7 @@ function PublicationSection({ annonce }) {
             <Button
                 onClick={handlePublish}
                 className="w-full"
-                disabled={!platforms.facebook && !platforms.seloger}
+                disabled={!platforms.facebook && !platforms.seloger && !platforms.lbc && !platforms.bienici}
                 isLoading={loading}
             >
                 Publier la sélection

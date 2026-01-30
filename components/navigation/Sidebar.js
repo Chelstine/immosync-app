@@ -23,6 +23,7 @@ export default function Sidebar({ user }) {
             <div className="flex flex-col w-64 bg-white border-r h-full">
                 {/* Top Left Logo Area */}
                 <div className="flex items-center h-16 flex-shrink-0 px-4 bg-white border-b">
+                    {/* If logo.png exists in public, this works */}
                     <img src="/logo.png" alt="Novek AI" className="h-8 w-8 mr-2" />
                     <span className="text-xl font-bold text-blue-900">Novek AI</span>
                 </div>

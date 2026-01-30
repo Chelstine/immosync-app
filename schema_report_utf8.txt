@@ -1,0 +1,25 @@
+Checking Airtable Schema...
+✅ Metadata API Access OK. Analyzing Tables...
+
+🔍 Checking Table: Users
+   ✅ Column 'Name' found.
+
+🔍 Checking Table: Biens_Immo
+   ✅ Column 'Type_Bien' found.
+   ✅ Column 'Prix' found.
+   ✅ Column 'Surface' found.
+   ✅ Column 'Pieces' found.
+   ✅ Column 'Ville' found.
+   ✅ Column 'DPE' found.
+   ✅ Column 'Description_Courte' found.
+   ✅ Column 'Email_Agent' found.
+   ✅ Column 'Statut' found.
+   ✅ Column 'Photos' found.
+
+🔍 Checking Table: Annonces_IA
+   ✅ Column 'Bien' found.
+   ✅ Column 'Titre_Généré' found.
+   ✅ Column 'Description_Générée' found.
+   ✅ Column 'Ton' found.
+   ✅ Column 'Publié_Facebook' found.
+   ✅ Column 'Publié_SeLoger' found.

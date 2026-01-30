@@ -1,0 +1,44 @@
+import Link from 'next/link';
+import { Calendar, CheckCircle } from 'lucide-react';
+
+export default function AnnonceCard({ annonce }) {
+    const dateStr = annonce.Date_Génération ? new Date(annonce.Date_Génération).toLocaleDateString('fr-FR') : 'Date inconnue';
+    const title = annonce.Titre_Généré ? (annonce.Titre_Généré.length > 80 ? annonce.Titre_Généré.substring(0, 80) + '...' : annonce.Titre_Généré) : 'Sans titre';
+    const desc = annonce.Description_Générée ? (annonce.Description_Générée.length > 100 ? annonce.Description_Générée.substring(0, 100) + '...' : annonce.Description_Générée) : 'Pas de description';
+
+    return (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
+            <div className="h-48 bg-gray-200 relative flex-shrink-0">
+                {annonce.Photo_Bien && annonce.Photo_Bien.length > 0 ? (
+                    <img src={annonce.Photo_Bien[0].url} alt={title} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100 text-sm">
+                        Pas de photo
+                    </div>
+                )}
+                <div className="absolute top-2 right-2 flex space-x-1">
+                    {annonce.Publié_SeLoger && <span title="Publié SeLoger" className="bg-blue-100 p-1 rounded-full text-blue-600"><CheckCircle size={14} /></span>}
+                    {annonce.Publié_Bienici && <span title="Publié BienCI" className="bg-yellow-100 p-1 rounded-full text-yellow-600"><CheckCircle size={14} /></span>}
+                    {annonce.Publié_Facebook && <span title="Publié Facebook" className="bg-blue-600 p-1 rounded-full text-white"><CheckCircle size={14} /></span>}
+                </div>
+            </div>
+            <div className="p-4 flex-1 flex flex-col">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 overflow-hidden" style={{ maxHeight: '3.5rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{title}</h3>
+                <p className="text-sm text-gray-500 mb-4 overflow-hidden flex-1" style={{ maxHeight: '5rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{desc}</p>
+
+                <div className="flex items-center justify-between mt-auto pt-4 border-t">
+                    <span className="flex items-center text-xs text-gray-400">
+                        <Calendar size={12} className="mr-1" />
+                        {dateStr}
+                    </span>
+                    <Link
+                        href={`/annonce/${annonce.id}`}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                    >
+                        Voir détails →
+                    </Link>
+                </div>
+            </div>
+        </div>
+    );
+}

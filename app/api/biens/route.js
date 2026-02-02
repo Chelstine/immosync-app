@@ -7,11 +7,16 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
 export async function POST(req) {
+    console.log("POST /api/biens hit");
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session) {
+        console.log("Unauthorized attempt");
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     try {
         const formData = await req.formData();
+        console.log("FormData received, keys:", Array.from(formData.keys()));
 
         // Handle photo uploads locally
         const photos = formData.getAll('photos');
@@ -30,18 +35,19 @@ export async function POST(req) {
                     // Clean filename and make unique
                     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
                     const ext = path.extname(photo.name) || '.jpg';
-                    const filename = `photo - ${uniqueSuffix}${ext} `;
+                    const filename = `photo-${uniqueSuffix}${ext}`;
                     const filepath = path.join(uploadDir, filename);
 
                     await writeFile(filepath, buffer);
 
-                    // The URL accessible by the browser (local)
-                    // Note: This URL is ONLY valid for the local browser.
-                    photoRecords.push({ url: `/ uploads / ${filename} ` });
+                    photoRecords.push({ url: `/uploads/${filename}` });
                 }
             }
             console.log(`Successfully uploaded ${photoRecords.length} photos locally.`);
         }
+
+        // Separate "Ton" from the data sent to "Biens_Immo" table
+        const ton = formData.get('Ton') || 'Professionnel';
 
         const bienData = {
             Type_Bien: formData.get('Type_Bien'),
@@ -51,21 +57,49 @@ export async function POST(req) {
             Ville: formData.get('Ville'),
             Code_Postal: formData.get('Code_Postal'),
             DPE: formData.get('DPE'),
-            Ton: formData.get('Ton') || 'Professionnel',
             Description_Courte: formData.get('Description_Courte') || '',
-            // Pass local photos (won't sync to Airtable attachments but might be stored as text if field allows)
-            Photos: photoRecords
         };
 
         // Create Bien in Airtable
         const newBien = await createBien(bienData, session.user.email);
+        console.log("Bien created in Airtable:", newBien.id);
+
+        // RENAME PHOTOS TO MATCH BIEN ID for persistence
+        // We do this so the Publisher Bot can find them later without Airtable storage
+        if (photoRecords.length > 0) {
+            try {
+                const fs = require('fs'); // standard fs for rename
+                const { rename } = require('fs/promises');
+
+                // We need to map the old paths (from photoRecords) to new paths
+                // photoRecords contains [{ url: '/uploads/photo-123.jpg' }]
+                const publicDir = path.join(process.cwd(), 'public');
+
+                for (let i = 0; i < photoRecords.length; i++) {
+                    const oldRelPath = photoRecords[i].url; // /uploads/photo...
+                    const oldFullPath = path.join(publicDir, oldRelPath); // c:\...\public\uploads\photo...
+
+                    const ext = path.extname(oldRelPath);
+                    const newFilename = `bien-${newBien.id}-${i}${ext}`;
+                    const newFullPath = path.join(publicDir, 'uploads', newFilename);
+
+                    if (fs.existsSync(oldFullPath)) {
+                        await rename(oldFullPath, newFullPath);
+                        console.log(`Renamed photo to: ${newFilename}`);
+                    }
+                }
+            } catch (err) {
+                console.error("Error renaming photos:", err);
+                // Continue execution, don't block
+            }
+        }
 
         // Generate Annonce immediately (AI)
         let generated = { titre: '', description: '' };
         try {
             console.log("Starting AI Generation...");
-            generated = await generateAnnonce(bienData);
-            console.log("AI Generation Successful");
+            generated = await generateAnnonce({ ...bienData, Ton: ton });
+            console.log("AI Generation Successful. Titre:", generated.titre);
         } catch (aiError) {
             console.error("AI Generation failed:", aiError);
             generated = { titre: "À rédiger (Erreur IA)", description: "La génération automatique a échoué. Veuillez rédiger l'annonce manuellement." };
@@ -76,7 +110,7 @@ export async function POST(req) {
             Bien: [newBien.id], // Link to the created Bien
             Titre_Généré: generated.titre,
             Description_Générée: generated.description,
-            Ton: bienData.Ton,
+            Ton: ton,
         });
 
         return NextResponse.json({ success: true, bienId: newBien.id }, { status: 201 });

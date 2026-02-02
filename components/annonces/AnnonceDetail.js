@@ -2,11 +2,33 @@
 import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import { Copy, Check, MapPin, Home, Euro, Maximize } from 'lucide-react';
+import { Copy, Check, MapPin, Home, Euro, Maximize, Edit } from 'lucide-react';
 
 export default function AnnonceDetail({ annonce }) {
     const [copied, setCopied] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedTitre, setEditedTitre] = useState(annonce.Titre_Généré);
+    const [editedDesc, setEditedDesc] = useState(annonce.Description_Générée);
     const bien = annonce.bienDetails || {};
+
+    const handleSave = async () => {
+        try {
+            const res = await fetch(`/api/annonces/${annonce.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ titre: editedTitre, description: editedDesc })
+            });
+
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                alert("Erreur lors de la sauvegarde");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Erreur réseau");
+        }
+    };
 
     const handleCopy = () => {
         const text = `TITRE:\n${annonce.Titre_Généré}\n\nDESCRIPTION:\n${annonce.Description_Générée}\n\nLien: ${window.location.href}`;
@@ -86,13 +108,48 @@ export default function AnnonceDetail({ annonce }) {
                 <div className="bg-white p-6 rounded-xl shadow-sm border space-y-4">
                     <div className="flex justify-between items-center mb-2">
                         <h2 className="text-lg font-semibold text-gray-700">Description générée</h2>
-                        <Button onClick={handleCopy} variant="outline">
-                            {copied ? <><Check size={16} className="mr-2" /> Copié !</> : <><Copy size={16} className="mr-2" /> Copier texte</>}
-                        </Button>
+                        <div className="flex space-x-2">
+                            {isEditing ? (
+                                <>
+                                    <Button onClick={handleSave} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                                        Enregistrer
+                                    </Button>
+                                    <Button onClick={() => setIsEditing(false)} variant="outline" size="sm">
+                                        Annuler
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Button onClick={() => setIsEditing(true)} variant="outline" size="sm">
+                                        <Edit className="mr-2 h-4 w-4" /> Modifier
+                                    </Button>
+                                    <Button onClick={handleCopy} variant="outline" size="sm">
+                                        {copied ? <><Check size={16} className="mr-2" /> Copié !</> : <><Copy size={16} className="mr-2" /> Copier</>}
+                                    </Button>
+                                </>
+                            )}
+                        </div>
                     </div>
-                    <div className="prose prose-blue max-w-none text-gray-600 whitespace-pre-wrap text-sm leading-relaxed">
-                        {annonce.Description_Générée}
-                    </div>
+
+                    {isEditing ? (
+                        <div className="space-y-4">
+                            <input
+                                value={editedTitre}
+                                onChange={(e) => setEditedTitre(e.target.value)}
+                                className="w-full text-2xl font-bold border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 bg-white"
+                            />
+                            <textarea
+                                value={editedDesc}
+                                onChange={(e) => setEditedDesc(e.target.value)}
+                                rows={10}
+                                className="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 bg-white"
+                            />
+                        </div>
+                    ) : (
+                        <div className="prose prose-blue max-w-none text-gray-600 whitespace-pre-wrap text-sm leading-relaxed">
+                            {annonce.Description_Générée}
+                        </div>
+                    )}
                 </div>
 
                 <Card>

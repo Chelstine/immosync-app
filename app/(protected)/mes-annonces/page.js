@@ -13,7 +13,10 @@ export default function MesAnnoncesPage() {
         fetch('/api/annonces')
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
+                if (data.annonces && Array.isArray(data.annonces)) {
+                    setAnnonces(data.annonces);
+                } else if (Array.isArray(data)) {
+                    // Fallback in case of old API cache or direct array
                     setAnnonces(data);
                 }
                 setLoading(false);

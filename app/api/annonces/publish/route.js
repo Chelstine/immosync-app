@@ -33,40 +33,44 @@ export async function POST(req) {
         if (userRecords.length === 0) return NextResponse.json({ error: 'User settings not found' }, { status: 404 });
         const user = userRecords[0].fields;
 
+        // Initialize update fields
+        const updateFields = {};
+
         // Facebook
         if (platforms.facebook) {
-            const pageId = user.Facebook_Page_ID;
-            const accessToken = user.Facebook_Access_Token;
-
-            if (pageId && accessToken) {
-                await publishToFacebook(annonce, pageId, accessToken);
-                await base('Annonces_IA').update(annonceId, { 'Publié_Facebook': true });
-            }
+            console.log("Queueing Facebook publication...");
+            updateFields['Facebook_Request'] = true;
+            updateFields['Publié_Facebook'] = false; // Reset status
         }
 
-        // Le Bon Coin (Logic Placeholder for Worker)
+        // Le Bon Coin
         if (platforms.lbc) {
-            if (user.LBC_Login && user.LBC_Password) {
-                // Trigger Worker here. For now, mark as published to simulate success.
-                await base('Annonces_IA').update(annonceId, { 'Publié_LBC': true });
-            }
+            console.log("Queueing LeBonCoin publication...");
+            updateFields['LBC_Request'] = true;
+            updateFields['Publié_LBC'] = false;
         }
 
         // SeLoger
         if (platforms.seloger) {
-            if (user.SeLoger_Login) {
-                await base('Annonces_IA').update(annonceId, { 'Publié_SeLoger': true });
-            }
+            console.log("Queueing SeLoger publication...");
+            updateFields['SeLoger_Request'] = true;
+            updateFields['Publié_SeLoger'] = false;
         }
 
         // Bien'ici
         if (platforms.bienici) {
-            if (user.BienIci_Login) {
-                await base('Annonces_IA').update(annonceId, { 'Publié_BienIci': true });
-            }
+            console.log("Queueing BienIci publication...");
+            updateFields['BienIci_Request'] = true;
+            updateFields['Publié_BienIci'] = false;
         }
 
-        return NextResponse.json({ success: true });
+        // Update Airtable to trigger the Watcher Agent
+        if (Object.keys(updateFields).length > 0) {
+            await base('Annonces_IA').update(annonceId, updateFields);
+            return NextResponse.json({ success: true, message: 'Publication mise en file d\'attente. L\'agent va traiter la demande.' });
+        } else {
+            return NextResponse.json({ success: false, message: 'Aucune plateforme sélectionnée.' });
+        }
 
     } catch (error) {
         console.error('Publication error:', error);

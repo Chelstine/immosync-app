@@ -8,10 +8,9 @@ export default function Sidebar({ user, onClose }) {
     const pathname = usePathname();
 
     const navItems = [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Nouveau Bien', href: '/nouveau-bien', icon: PlusCircle },
+        { name: 'Dashboard', href: '/', icon: LayoutDashboard },
         { name: 'Mes Annonces', href: '/mes-annonces', icon: List },
-        { name: 'Paramètres', href: '/settings', icon: Settings },
+        { name: 'Nouveau Bien', href: '/nouveau-bien', icon: PlusCircle },
     ];
 
     const handleSignOut = () => {
@@ -42,8 +41,8 @@ export default function Sidebar({ user, onClose }) {
                                 href={item.href}
                                 onClick={onClose} // Close sidebar on mobile when link clicked
                                 className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${isActive
-                                        ? 'bg-blue-50 text-blue-700'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    ? 'bg-blue-50 text-blue-700'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                     }`}
                             >
                                 <Icon className={`mr-3 h-5 w-5 ${isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'}`} />

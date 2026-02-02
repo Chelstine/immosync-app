@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Calendar, CheckCircle } from 'lucide-react';
+import { Calendar, CheckCircle, Trash2 } from 'lucide-react';
 
 export default function AnnonceCard({ annonce }) {
     const dateStr = annonce.Date_Génération ? new Date(annonce.Date_Génération).toLocaleDateString('fr-FR') : 'Date inconnue';
@@ -34,12 +34,28 @@ export default function AnnonceCard({ annonce }) {
                         <Calendar size={12} className="mr-1" />
                         {dateStr}
                     </span>
-                    <Link
-                        href={`/annonce/${annonce.id}`}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-500"
-                    >
-                        Voir détails →
-                    </Link>
+                    <div className="flex items-center space-x-2">
+                        <button
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                if (!confirm('Supprimer cette annonce ?')) return;
+                                try {
+                                    const res = await fetch(`/api/annonces/${annonce.id}`, { method: 'DELETE' });
+                                    if (res.ok) window.location.reload();
+                                } catch (err) { alert('Erreur suppression'); }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors"
+                            title="Supprimer"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                        <Link
+                            href={`/annonce/${annonce.id}`}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                        >
+                            Voir détails →
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>

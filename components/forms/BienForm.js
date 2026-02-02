@@ -10,16 +10,25 @@ import { Upload, X, ChevronDown, Sparkles, UploadCloud } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const bienSchema = z.object({
-    Type_Bien: z.enum(['Appartement', 'Maison', 'Terrain', 'Local Commercial', 'Parking / Box', 'Immeuble']).optional(), // Changed to optional as custom type will be handled separately
-    Type_Autre: z.string().optional(), // Added for custom type
+    Type_Bien: z.enum(['Appartement', 'Maison', 'Terrain', 'Local Commercial', 'Parking / Box', 'Immeuble']).optional(),
+    Type_Autre: z.string().optional(),
     Prix: z.coerce.number().min(1, 'Prix requis'),
     Surface: z.coerce.number().min(9, 'Surface requise (>9m²)'),
-    Pieces: z.coerce.number().min(1, 'Pièces requises'),
+    Pieces: z.coerce.number().optional(), // Made optional globally, but UI logic will handle it
     Ville: z.string().min(2, 'Ville requise'),
     Code_Postal: z.string().regex(/^\d{5}$/, 'Code postal invalide'),
-    DPE: z.string().min(1, 'Requis'), // Simplified DPE validation
-    Ton: z.enum(['Professionnel', 'Luxe', 'Famillial', 'Informatif']),
+    DPE: z.string().min(1, 'Requis'),
+    Ton: z.enum(['Professionnel', 'Luxe', 'Amical', 'Urgent', 'Informatif']),
     Description_Courte: z.string().optional(),
+}).refine((data) => {
+    // Custom validation: Pieces is required if not a Terrain
+    if (data.Type_Bien !== 'Terrain' && !data.Pieces) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Le nombre de pièces est requis pour ce type de bien",
+    path: ["Pieces"]
 });
 
 export default function BienForm() {
@@ -58,18 +67,20 @@ export default function BienForm() {
     };
 
     const onSubmit = async (data) => {
+        console.log("Submitting form...", data);
         setLoading(true);
         try {
             const formData = new FormData();
 
-            // Handle Custom Type
-            if (isCustomType) {
-                formData.append('Type_Bien', data.Type_Autre || 'Autre');
-            } else {
-                Object.keys(data).forEach(key => {
-                    if (key !== 'photos' && key !== 'Type_Autre') formData.append(key, data[key]); // Exclude Type_Autre if not custom
-                });
-            }
+            Object.keys(data).forEach(key => {
+                if (key !== 'photos') {
+                    if (key === 'Type_Bien' && isCustomType) {
+                        formData.append('Type_Bien', data.Type_Autre || 'Autre');
+                    } else if (key !== 'Type_Autre') {
+                        formData.append(key, data[key]);
+                    }
+                }
+            });
 
             photos.forEach(photo => formData.append('photos', photo));
 
@@ -93,7 +104,7 @@ export default function BienForm() {
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={handleSubmit(onSubmit, (errors) => console.log('Validation Errors:', errors))} className="space-y-8">
             <Card className="p-8">
                 <div className="border-b pb-6 mb-8">
                     <h2 className="text-2xl font-bold text-gray-900">Nouveau Bien</h2>
@@ -112,11 +123,12 @@ export default function BienForm() {
                                     <select
                                         {...register('Type_Bien')}
                                         onChange={(e) => {
-                                            if (e.target.value === 'Autre_Custom') {
+                                            const val = e.target.value;
+                                            if (val === 'Autre_Custom') {
                                                 setIsCustomType(true);
                                                 setValue('Type_Bien', '');
                                             } else {
-                                                setValue('Type_Bien', e.target.value);
+                                                setValue('Type_Bien', val);
                                             }
                                         }}
                                         className="appearance-none w-full rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-3 px-4 text-black bg-gray-50 hover:bg-white transition-all cursor-pointer"
@@ -154,6 +166,7 @@ export default function BienForm() {
                                     </div>
                                 )}
                             </div>
+                            {errors.Type_Bien && <p className="mt-1 text-sm text-red-600">{errors.Type_Bien.message}</p>}
                         </div>
 
                         <div>
@@ -181,11 +194,13 @@ export default function BienForm() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Pièces</label>
-                                <Input {...register('Pieces')} type="number" placeholder="3" error={errors.Pieces?.message} />
-                            </div>
-                            <div>
+                            {typeBienValue !== 'Terrain' && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Pièces</label>
+                                    <Input {...register('Pieces')} type="number" placeholder="3" error={errors.Pieces?.message} />
+                                </div>
+                            )}
+                            <div className={typeBienValue === 'Terrain' ? 'col-span-2' : ''}>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">DPE</label>
                                 <div className="relative">
                                     <select
@@ -200,6 +215,7 @@ export default function BienForm() {
                                         <ChevronDown className="h-4 w-4" />
                                     </div>
                                 </div>
+                                {errors.DPE && <p className="mt-1 text-sm text-red-600">{errors.DPE.message}</p>}
                             </div>
                         </div>
 
@@ -220,6 +236,7 @@ export default function BienForm() {
                                     <ChevronDown className="h-4 w-4" />
                                 </div>
                             </div>
+                            {errors.Ton && <p className="mt-1 text-sm text-red-600">{errors.Ton.message}</p>}
                         </div>
                     </div>
                 </div>

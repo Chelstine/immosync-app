@@ -73,9 +73,13 @@ export async function POST(req) {
             console.log("Starting AI Generation...");
             generated = await generateAnnonce({ ...bienData, Ton: ton });
         } catch (aiError) {
-            console.error("AI Generation failed, switching to Smart Fallback:", aiError);
+            console.error("AI Generation failed:", aiError);
+        }
 
-            const titreFallback = `${bienData.Type_Bien} ${bienData.Pieces} p. - ${bienData.Ville}`;
+        // FORCE FALLBACK if AI failed OR returned empty
+        if (!generated || !generated.titre || generated.titre.length < 5) {
+            console.log("⚠️ AI returned empty/invalid result. Using Smart Fallback.");
+            const titreFallback = `${bienData.Type_Bien} ${bienData.Pieces}pièces - ${bienData.Ville}`;
             const descFallback = `À VENDRE - ${bienData.Ville} (${bienData.Code_Postal})\n\n` +
                 `Type : ${bienData.Type_Bien}\nSurface : ${bienData.Surface} m²\nPièces : ${bienData.Pieces}\n` +
                 `Prix : ${bienData.Prix} €\nDPE : ${bienData.DPE}\n\n` +

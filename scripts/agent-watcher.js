@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '../.env.local' });
 const Airtable = require('airtable');
 const path = require('path');
 const fs = require('fs');
@@ -6,76 +6,56 @@ const https = require('https');
 const { exec } = require('child_process');
 
 // Configuration
-const AIRTABLE_API_KEY = process.env.AIRTABLE_PAT; // Personal Access Token
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
+const base = new Airtable({ apiKey: process.env.AIRTABLE_PAT }).base(process.env.AIRTABLE_BASE_ID);
 
-if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-    console.error("❌ ERREUR: Variables d'environnement manquantes (.env.local)");
-    console.error("Assurez-vous d'avoir AIRTABLE_PAT et AIRTABLE_BASE_ID.");
-    process.exit(1);
-}
-
-const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
+// Constants
 const POLL_INTERVAL_MS = 10000; // Check every 10 seconds
 
-console.log("=== IMMOSYNC DESKTOP AGENT (WATCHER) ===");
-console.log("🟢 En attente de commandes de publication...");
-console.log(`📡 Connecté à la base: ${AIRTABLE_BASE_ID}`);
+console.log("🕵️  Agent de Surveillance Démarré...");
+console.log("En attente de demandes de publication (Statut: 'Pending')...");
 
 async function checkQueue() {
     try {
-        // 1. Find Annonces marked as "À Publier" (We will add a status field logic or check checkboxes)
-        // Logic: Checkbox "Publier_Facebook_Requested" is TRUE AND "Publié_Facebook" is FALSE/Empty.
-        // For simplicity in this MVP, let's look for records where we manually triggered a "Request" flag.
-        // Or assume the API toggles a "Status_Publication" field to "Pending".
+        // Find records where (Facebook_Request=TRUE AND Publié_Facebook!=TRUE) OR (LBC_Request=TRUE AND Publié_LBC!=TRUE)
+        // Airtable formula: OR(AND({Facebook_Request}, NOT({Publié_Facebook})), AND({LBC_Request}, NOT({Publié_LBC})))
+        const filterFormula = "OR(AND({Facebook_Request}, NOT({Publié_Facebook})), AND({LBC_Request}, NOT({Publié_LBC})))";
 
-        // Let's use a filter: Find annonces where 'Statut_Publication' = 'En attente'
-        // We need to add this field to Airtable or use existing ones.
-        // Let's use the explicit checkboxes concept from before but driven by a "Command".
-
-        // Simpler: We'll create a view or filter in code.
         const records = await base('Annonces_IA').select({
-            filterByFormula: "AND({Facebook_Request} = 1, {Publié_Facebook} != 1)",
+            filterByFormula: filterFormula,
             maxRecords: 1 // Process one by one
         }).firstPage();
 
         if (records.length > 0) {
-            const annonce = records[0];
-            console.log(`⚡ Commande reçue pour l'annonce: ${annonce.fields.Titre_Généré}`);
-
-            await processPublication(annonce);
+            const record = records[0];
+            await processAnnonce(record);
         }
-
     } catch (error) {
-        console.error("Erreur de surveillance:", error);
+        console.error("Erreur polling:", error);
     }
 }
 
-async function processPublication(annonceRecord) {
-    const annonceId = annonceRecord.id;
-    const annonce = annonceRecord.fields;
+async function processAnnonce(record) {
+    const annonce = record.fields;
+    const annonceId = record.id;
+    console.log(`\n🔔 Nouvelle demande détectée: ${annonce.Titre_Généré}`);
 
-    console.log(`🔒 Verrouillage de la commande ${annonceId} pour éviter les doublons...`);
-    try {
-        // SAFETY FIRST: We uncheck the request flag IMMEDIATELY so other loops don't pick it up
-        // We also set a temporary status if you like, but unchecking is enough to stop the loop.
-        await base('Annonces_IA').update(annonceId, {
-            'Facebook_Request': false
-            // 'Statut_Publication': 'En cours...' // REMOVED: Field does not exist in user's Airtable
-        });
-    } catch (lockError) {
-        console.error("❌ Impossible de verrouiller la commande Airtable. Abandon.", lockError);
-        return;
-    }
-
-    // 1. Get Linked Bien details
+    // 1. Fetch Related Bien Data
     if (!annonce.Bien || annonce.Bien.length === 0) {
-        console.error("❌ Annonce sans Bien lié.");
+        console.error("❌ Erreur: Pas de bien lié à cette annonce.");
         return;
     }
     const bienId = annonce.Bien[0];
-    const bienRecord = await base('Biens_Immo').find(bienId);
-    const bien = bienRecord.fields;
+    const userEmail = annonce.Email_User ? annonce.Email_User[0] : null;
+
+    // Fetch Bien details from 'Biens_Immo' table
+    let bien;
+    try {
+        const bienRecord = await base('Biens_Immo').find(bienId);
+        bien = bienRecord.fields;
+    } catch (err) {
+        console.error("❌ Erreur récupération Bien:", err);
+        return;
+    }
 
     console.log(`📦 Préparation des données pour le Bien: ${bien.Type_Bien} à ${bien.Ville}`);
 
@@ -114,7 +94,6 @@ async function processPublication(annonceRecord) {
             try {
                 await downloadFile(photoData.url, destPath);
                 photos.push(destPath);
-                // process.stdout.write('.'); // Progress indicator
             } catch (err) {
                 console.error(`❌ Erreur téléchargement photo ${i}:`, err.message);
             }
@@ -131,43 +110,63 @@ async function processPublication(annonceRecord) {
         price: bien.Prix,
         city: bien.Ville,
         type: bien.Type_Bien,
-        photos: photos // Now contains paths to freshly downloaded files
+        surface: bien.Surface,   // Added for LBC
+        pieces: bien.Pieces,     // Added for LBC
+        photos: photos
     };
 
     const payloadPath = path.join(process.cwd(), 'temp', `task-${annonceId}.json`);
     if (!fs.existsSync(path.dirname(payloadPath))) fs.mkdirSync(path.dirname(payloadPath), { recursive: true });
     fs.writeFileSync(payloadPath, JSON.stringify(payload));
 
-    // 4. Execute Publisher Script
-    console.log("🚀 Lancement du Robot Facebook...");
+    // 4. PUBLICATION SEQUENCE (MULTI-PLATFORM) 🚀
 
-    // ... rest of execution logic ...
-    const scriptPath = path.join(__dirname, 'publish-facebook.js');
+    // --- FACEBOOK ---
+    if (annonce.Facebook_Request && !annonce.Publié_Facebook) {
+        console.log("🔵 Lancement du Robot Facebook...");
+        const fbScript = path.join(__dirname, 'publish-facebook.js');
 
-    await new Promise((resolve) => {
-        exec(`node "${scriptPath}" "${payloadPath}"`, async (error, stdout, stderr) => {
-            if (error) {
-                console.error(`❌ Échec Publication: ${error.message}`);
-                // Optional: Write error to Airtable
-            } else {
-                console.log(`✅ Succès ! Retour du robot:\n${stdout}`);
-
-                // 5. Update Airtable: Mark as DONE
-                try {
-                    await base('Annonces_IA').update(annonceId, {
-                        'Publié_Facebook': true,
-                        // 'Facebook_Request': false // Already unchecked at start
-                    });
-                    console.log("💾 Succès confirmé dans Airtable.");
-                } catch (updErr) {
-                    console.error("Erreur mise à jour Airtable finale:", updErr);
+        await new Promise(resolve => {
+            exec(`node "${fbScript}" "${payloadPath}"`, async (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`❌ Échec FB (Voir logs)`);
+                    console.error(stderr);
+                } else {
+                    console.log(`✅ Succès FB !`);
+                    try {
+                        await base('Annonces_IA').update(annonceId, { 'Publié_Facebook': true, 'Facebook_Request': false });
+                    } catch (e) { console.error("Err Update Airtable FB", e); }
                 }
-            }
-            // Cleanup: Delete downloaded photos to save space?
-            // fs.rmSync(path.join(process.cwd(), 'temp', `downloads`), { recursive: true, force: true });
-            resolve();
+                resolve();
+            });
         });
-    });
+    }
+
+    // --- LEBONCOIN ---
+    if (annonce.LBC_Request && !annonce.Publié_LBC) {
+        console.log("🟧 Lancement du Robot LeBonCoin...");
+        const lbcScript = path.join(__dirname, 'publish-leboncoin.js');
+
+        await new Promise(resolve => {
+            exec(`node "${lbcScript}" "${payloadPath}"`, async (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`❌ Échec LBC (Voir logs)`);
+                    console.error(stderr);
+                } else {
+                    console.log(`✅ Succès LBC !`);
+                    try {
+                        await base('Annonces_IA').update(annonceId, { 'Publié_LBC': true, 'LBC_Request': false });
+                    } catch (e) { console.error("Err Update Airtable LBC", e); }
+                }
+                resolve();
+            });
+        });
+    }
+
+    console.log(`🏁 Fin du traitement pour l'annonce ${annonceId}. En attente de nouvelles tâches...`);
+
+    // Cleanup photos (Optional: keep them if needed for debug)
+    // try { fs.rmSync(path.dirname(payloadPath), { recursive: true, force: true }); } catch(e) {}
 }
 
 // Start Polling Loop

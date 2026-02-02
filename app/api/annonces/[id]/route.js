@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { deleteAnnonce, updateAnnonce, getAnnonceById, getBienById } from '@/lib/airtable';
+import { deleteAnnonce, updateAnnonce, getAnnonceById, getBienById, updateBien } from '@/lib/airtable';
 
 export async function GET(req, { params }) {
     const { id } = await params;
@@ -10,13 +10,8 @@ export async function GET(req, { params }) {
 
     try {
         const annonce = await getAnnonceById(id);
+        if (!annonce) return NextResponse.json({ error: 'Annonce not found' }, { status: 404 });
 
-        if (!annonce) {
-            return NextResponse.json({ error: 'Annonce not found' }, { status: 404 });
-        }
-
-        // Fetch visible details of the linked Bien (if any)
-        // Airtable returns array of IDs for linked records
         let bienDetails = {};
         if (annonce.Bien && annonce.Bien.length > 0) {
             bienDetails = await getBienById(annonce.Bien[0]);
@@ -48,12 +43,31 @@ export async function PUT(req, { params }) {
 
     try {
         const body = await req.json();
-        const updated = await updateAnnonce(id, {
+
+        // Update Annonce Text
+        const annonceUpdatePromise = updateAnnonce(id, {
             Titre_Généré: body.titre,
             Description_Générée: body.description
         });
-        return NextResponse.json({ success: true, annonce: updated });
+
+        // Update Linked Bien Data (if provided)
+        let bienUpdatePromise = Promise.resolve();
+        if (body.bienId && (body.prix || body.surface || body.pieces || body.ville)) {
+            bienUpdatePromise = updateBien(body.bienId, {
+                Prix: body.prix ? parseFloat(body.prix) : undefined,
+                Surface: body.surface ? parseFloat(body.surface) : undefined,
+                Pieces: body.pieces ? parseInt(body.pieces) : undefined,
+                Ville: body.ville,
+                Code_Postal: body.codePostal,
+                DPE: body.dpe
+            });
+        }
+
+        await Promise.all([annonceUpdatePromise, bienUpdatePromise]);
+
+        return NextResponse.json({ success: true });
     } catch (error) {
+        console.error("Update error:", error);
         return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
     }
 }

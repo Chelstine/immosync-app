@@ -73,8 +73,16 @@ export async function POST(req) {
             console.log("Starting AI Generation...");
             generated = await generateAnnonce({ ...bienData, Ton: ton });
         } catch (aiError) {
-            console.error("AI Generation failed:", aiError);
-            generated = { titre: "À rédiger (Erreur IA)", description: "Erreur IA." };
+            console.error("AI Generation failed, switching to Smart Fallback:", aiError);
+
+            const titreFallback = `${bienData.Type_Bien} ${bienData.Pieces} p. - ${bienData.Ville}`;
+            const descFallback = `À VENDRE - ${bienData.Ville} (${bienData.Code_Postal})\n\n` +
+                `Type : ${bienData.Type_Bien}\nSurface : ${bienData.Surface} m²\nPièces : ${bienData.Pieces}\n` +
+                `Prix : ${bienData.Prix} €\nDPE : ${bienData.DPE}\n\n` +
+                `${bienData.Description_Courte ? bienData.Description_Courte + '\n\n' : ''}` +
+                `Contactez-nous pour plus d'infos.`;
+
+            generated = { titre: titreFallback, description: descFallback };
         }
 
         // Create Annonce in Annonces_IA table

@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 🏠 ImmoSync - Solution de Multidiffusion Immobilière IA
 
-## Getting Started
+ImmoSync est une plateforme SaaS hybride permettant aux agents immobiliers de générer des annonces par IA et de les diffuser automatiquement sur Facebook Marketplace et LeBonCoin.
 
-First, run the development server:
+## 🌟 Architecture Hybride
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Le projet repose sur deux composants qui communiquent de manière asynchrone via Airtable :
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1.  **ImmoSync Web (Cloud)** :
+    *   Hébergé sur [Railway](https://railway.app).
+    *   Interface Next.js 14 pour la gestion des annonces.
+    *   Génération de textes par OpenAI (GPT-4o).
+    *   Stockage des photos sur Cloudinary.
+    *   Base de données : Airtable.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+2.  **ImmoSync Agent (Desktop)** :
+    *   Logiciel installé sur le PC du client.
+    *   Surveille Airtable pour les nouvelles demandes de publication.
+    *   Utilise Playwright pour piloter un navigateur "Fantôme" et publier sur les plateformes.
+    *   Utilise l'IP résidentielle du client (Anti-Blocage).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🚀 Déploiement (Pour l'Admin)
 
-To learn more about Next.js, take a look at the following resources:
+### 1. Mise en ligne du Site
+Le site se déploie automatiquement sur Railway via GitHub.
+Les variables d'environnement requises sont :
+*   `OPENAI_API_KEY`
+*   `AIRTABLE_PAT`, `AIRTABLE_BASE_ID`
+*   `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+*   `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2. Mise à jour de l'Agent Client
+Pour générer une nouvelle version de l'agent distribuable :
+1.  Lancer `PREPARER_DEPLOYMENT.bat` à la racine du projet.
+2.  Cela va :
+    *   Obfusquer le code source JS (protection IP).
+    *   Créer le ZIP d'installation (`ImmoSync-Agent.zip`).
+    *   Placer ce ZIP dans le dossier `public/` du site Web.
+3.  Faire un `git push` pour mettre en ligne la nouvelle version.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 💻 Installation (Pour le Client Final)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Le client n'a besoin de faire cela qu'une seule fois :
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1.  Se connecter sur ImmoSync Web.
+2.  Aller sur la page **"Télécharger l'Assistant"** (ou `/download`).
+3.  Télécharger et dézipper le dossier.
+4.  Lancer **`INSTALL_AGENT.bat`**.
+    *   Cela installe les dépendances.
+    *   Cela configure le démarrage automatique (Mode Fantôme 👻).
+5.  Lancer **`GÉRER_COMPTES.bat`** pour connecter ses comptes Facebook / LeBonCoin.
+
+---
+
+## 🛠️ Stack Technique
+
+*   **Frontend :** Next.js 14, TailwindCSS, Lucide Icons.
+*   **Backend :** API Routes Next.js, Airtable SDK.
+*   **Automation :** Node.js, Playwright, Stealth Plugin.
+*   **Security :** NextAuth.js, Javascript Obfuscator.
+
+## 📝 Licence
+Propriété exclusive de NOVEK. Code source protégé.

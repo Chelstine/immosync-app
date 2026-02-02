@@ -7,16 +7,35 @@ import { Copy, Check, MapPin, Home, Euro, Maximize, Edit } from 'lucide-react';
 export default function AnnonceDetail({ annonce }) {
     const [copied, setCopied] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+
+    // Annonce States
     const [editedTitre, setEditedTitre] = useState(annonce.Titre_Généré);
     const [editedDesc, setEditedDesc] = useState(annonce.Description_Générée);
+
+    // Bien States (linked data)
     const bien = annonce.bienDetails || {};
+    const [editedPrix, setEditedPrix] = useState(bien.Prix);
+    const [editedSurface, setEditedSurface] = useState(bien.Surface);
+    const [editedPieces, setEditedPieces] = useState(bien.Pieces);
+    const [editedVille, setEditedVille] = useState(bien.Ville);
+    const [editedDPE, setEditedDPE] = useState(bien.DPE);
 
     const handleSave = async () => {
         try {
             const res = await fetch(`/api/annonces/${annonce.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ titre: editedTitre, description: editedDesc })
+                body: JSON.stringify({
+                    titre: editedTitre,
+                    description: editedDesc,
+                    // Bien updates
+                    bienId: bien.id,
+                    prix: editedPrix,
+                    surface: editedSurface,
+                    pieces: editedPieces,
+                    ville: editedVille,
+                    dpe: editedDPE
+                })
             });
 
             if (res.ok) {
@@ -55,7 +74,6 @@ export default function AnnonceDetail({ annonce }) {
                         </div>
                     )}
                 </div>
-                {/* Grid of other photos if any */}
                 {bien.Photos && bien.Photos.length > 1 && (
                     <div className="grid grid-cols-4 gap-2">
                         {bien.Photos.slice(1).map((p, i) => (
@@ -71,26 +89,44 @@ export default function AnnonceDetail({ annonce }) {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex items-center text-gray-700">
                             <Euro size={18} className="mr-2 text-blue-600" />
-                            <span className="font-bold">{bien.Prix} €</span>
+                            {isEditing ?
+                                <input type="number" value={editedPrix} onChange={e => setEditedPrix(e.target.value)} className="border rounded p-1 w-24" />
+                                : <span className="font-bold">{bien.Prix} €</span>
+                            }
                         </div>
                         <div className="flex items-center text-gray-700">
                             <Maximize size={18} className="mr-2 text-blue-600" />
-                            <span>{bien.Surface} m²</span>
+                            {isEditing ?
+                                <input type="number" value={editedSurface} onChange={e => setEditedSurface(e.target.value)} className="border rounded p-1 w-20" />
+                                : <span>{bien.Surface} m²</span>
+                            }
                         </div>
                         <div className="flex items-center text-gray-700">
                             <Home size={18} className="mr-2 text-blue-600" />
-                            <span>{bien.Pieces} pièces</span>
+                            {isEditing ?
+                                <input type="number" value={editedPieces} onChange={e => setEditedPieces(e.target.value)} className="border rounded p-1 w-16" />
+                                : <span>{bien.Pieces} pièces</span>
+                            }
                         </div>
                         <div className="flex items-center text-gray-700">
                             <MapPin size={18} className="mr-2 text-blue-600" />
-                            <span>{bien.Ville}</span>
+                            {isEditing ?
+                                <input type="text" value={editedVille} onChange={e => setEditedVille(e.target.value)} className="border rounded p-1 w-full" />
+                                : <span>{bien.Ville}</span>
+                            }
                         </div>
                     </div>
-                    <div className="mt-4 pt-4 border-t">
-                        <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                            DPE: {bien.DPE}
-                        </span>
-                        <span className="ml-2 inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                    <div className="mt-4 pt-4 border-t flex items-center gap-2">
+                        {isEditing ? (
+                            <select value={editedDPE} onChange={e => setEditedDPE(e.target.value)} className="border rounded p-1 text-sm">
+                                {['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(l => <option key={l} value={l}>{l}</option>)}
+                            </select>
+                        ) : (
+                            <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                DPE: {bien.DPE}
+                            </span>
+                        )}
+                        <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
                             {bien.Type_Bien}
                         </span>
                     </div>

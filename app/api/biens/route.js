@@ -59,7 +59,7 @@ export async function POST(req) {
             Code_Postal: formData.get('Code_Postal'),
             DPE: formData.get('DPE'),
             Description_Courte: formData.get('Description_Courte') || '',
-            // Photos (Airtable expects array of objects with url)
+            // Essai du standard "Photos". Si votre Airtable a un autre nom, modifiez ici.
             Photos: photoRecords
         };
 

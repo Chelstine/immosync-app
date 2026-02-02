@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import { Copy, Check, MapPin, Home, Euro, Maximize, Edit } from 'lucide-react';
+import { Copy, Check, MapPin, Home, Euro, Maximize, Edit, Share2 } from 'lucide-react';
 
 export default function AnnonceDetail({ annonce }) {
     const [copied, setCopied] = useState(false);

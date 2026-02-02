@@ -188,10 +188,7 @@ export default function AnnonceDetail({ annonce }) {
                     )}
                 </div>
 
-                <Card>
-                    <h3 className="text-lg font-semibold mb-4">Publication Multi-Canal</h3>
-                    <PublicationSection annonce={annonce} />
-                </Card>
+                <PublicationSection annonce={annonce} />
             </div>
         </div>
     );
@@ -322,21 +319,21 @@ function PublicationSection({ annonce }) {
                                             'border-gray-100 hover:border-gray-300 hover:shadow-sm bg-white'}
                             `}
                         >
-                            <div className="flex justify-between items-start">
-                                <div className={`p-2.5 rounded-lg ${isSelected || isPublished ? 'bg-white shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'} transition-colors`}>
+                            <div className="flex justify-between items-start mb-3">
+                                <div className={`p-2.5 rounded-lg flex-shrink-0 ${isSelected || isPublished ? 'bg-white shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'} transition-colors`}>
                                     <Icon size={24} className={isSelected || isPublished ? `text-${config.color}-600` : ''} />
                                 </div>
 
                                 {/* Status Badge */}
-                                <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold border flex items-center gap-1.5 ${status.color}`}>
+                                <span className={`flex-shrink-0 ml-2 px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold border flex items-center gap-1.5 ${status.color}`}>
                                     {status.icon && <status.icon size={12} className={status.icon === Loader2 ? "animate-spin" : ""} />}
                                     {status.label}
                                 </span>
                             </div>
 
-                            <div>
-                                <h3 className={`font-bold text-lg ${isSelected ? `text-${config.color}-900` : 'text-gray-700'}`}>{config.label}</h3>
-                                <p className="text-xs text-gray-500 mt-1 font-medium">{config.desc}</p>
+                            <div className="min-w-0">
+                                <h3 className={`font-bold text-lg truncate ${isSelected ? `text-${config.color}-900` : 'text-gray-700'}`}>{config.label}</h3>
+                                <p className="text-xs text-gray-500 mt-1 font-medium line-clamp-2">{config.desc}</p>
                             </div>
 
                             {/* Checkbox Visual - Only actionable if not already processing/done */}

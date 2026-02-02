@@ -60,7 +60,7 @@ export async function POST(req) {
             DPE: formData.get('DPE'),
             Description_Courte: formData.get('Description_Courte') || '',
             // Photos (Airtable expects array of objects with url)
-            Photo_Bien: photoRecords
+            Photos: photoRecords
         };
 
         // Create Bien in Airtable

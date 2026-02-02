@@ -2,6 +2,7 @@ require('dotenv').config({ path: '.env.local' });
 const Airtable = require('airtable');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 const { exec } = require('child_process');
 
 // Configuration
@@ -78,24 +79,49 @@ async function processPublication(annonceRecord) {
 
     console.log(`📦 Préparation des données pour le Bien: ${bien.Type_Bien} à ${bien.Ville}`);
 
-    // 2. Locate Photos Locally
-    // The Agent assumes photos are synchronised or available in public/uploads
-    // In a real Desktop App, we would download them from URL if they are not local.
-    // For this Hybrid MVP (Local Server + Local Agent), they are in the same folder.
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+    // 2. DOWNLOAD PHOTOS (Cloud Compatibility Upgrade) ☁️ -> 💻
     const photos = [];
-    if (fs.existsSync(uploadDir)) {
-        const files = fs.readdirSync(uploadDir);
-        files.forEach(file => {
-            // Look for bien-{ID}-...
-            if (file.startsWith(`bien-${bienId}-`)) {
-                photos.push(path.join(uploadDir, file));
-            }
-        });
-    }
 
-    if (photos.length === 0) {
-        console.warn("⚠️ Aucune photo locale trouvée (bien-" + bienId + "). Publication sans photo ?");
+    // Check if Bien has photos in Airtable
+    if (bien.Photo_Bien && bien.Photo_Bien.length > 0) {
+        const downloadDir = path.join(process.cwd(), 'temp', `downloads`, `bien-${bienId}`);
+        if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
+
+        console.log(`⬇️ Téléchargement de ${bien.Photo_Bien.length} photos depuis le Cloud...`);
+
+        // Helper to download a single file
+        const downloadFile = (url, dest) => {
+            return new Promise((resolve, reject) => {
+                const file = fs.createWriteStream(dest);
+                https.get(url, (response) => {
+                    response.pipe(file);
+                    file.on('finish', () => {
+                        file.close(resolve);
+                    });
+                }).on('error', (err) => {
+                    fs.unlink(dest, () => { }); // Delete failed file
+                    reject(err);
+                });
+            });
+        };
+
+        // Download all photos sequentially
+        for (let i = 0; i < bien.Photo_Bien.length; i++) {
+            const photoData = bien.Photo_Bien[i];
+            const ext = path.extname(photoData.filename) || '.jpg';
+            const destPath = path.join(downloadDir, `photo-${i}${ext}`);
+
+            try {
+                await downloadFile(photoData.url, destPath);
+                photos.push(destPath);
+                // process.stdout.write('.'); // Progress indicator
+            } catch (err) {
+                console.error(`❌ Erreur téléchargement photo ${i}:`, err.message);
+            }
+        }
+        console.log(`\n✅ ${photos.length} photos téléchargées localement.`);
+    } else {
+        console.warn("⚠️ Aucune photo trouvée dans la fiche Airtable du Bien.");
     }
 
     // 3. Create Payload File
@@ -105,7 +131,7 @@ async function processPublication(annonceRecord) {
         price: bien.Prix,
         city: bien.Ville,
         type: bien.Type_Bien,
-        photos: photos
+        photos: photos // Now contains paths to freshly downloaded files
     };
 
     const payloadPath = path.join(process.cwd(), 'temp', `task-${annonceId}.json`);
@@ -115,9 +141,7 @@ async function processPublication(annonceRecord) {
     // 4. Execute Publisher Script
     console.log("🚀 Lancement du Robot Facebook...");
 
-    // Mark as "Processing" to avoid double pickup?
-    // In a loop, we just wait for exec to finish.
-
+    // ... rest of execution logic ...
     const scriptPath = path.join(__dirname, 'publish-facebook.js');
 
     await new Promise((resolve) => {
@@ -132,13 +156,15 @@ async function processPublication(annonceRecord) {
                 try {
                     await base('Annonces_IA').update(annonceId, {
                         'Publié_Facebook': true,
-                        'Facebook_Request': false // Unflag request
+                        // 'Facebook_Request': false // Already unchecked at start
                     });
-                    console.log("💾 Statut mis à jour dans Airtable.");
+                    console.log("💾 Succès confirmé dans Airtable.");
                 } catch (updErr) {
-                    console.error("Erreur mise à jour Airtable:", updErr);
+                    console.error("Erreur mise à jour Airtable finale:", updErr);
                 }
             }
+            // Cleanup: Delete downloaded photos to save space?
+            // fs.rmSync(path.join(process.cwd(), 'temp', `downloads`), { recursive: true, force: true });
             resolve();
         });
     });

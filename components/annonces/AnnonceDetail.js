@@ -186,84 +186,127 @@ function PublicationSection({ annonce }) {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
 
-            setStatus({ type: 'success', message: 'Publication réussie !' });
+            setStatus({ type: 'success', message: 'Demande de publication mise en file d\'attente !' });
+            // Optionally, refresh annonce data or update local state to reflect pending status
         } catch (err) {
             setStatus({ type: 'error', message: err.message });
         } finally {
-            setLoading(false);
+            setPublishing(false);
         }
     };
 
+    // Helper to determine status
+    const getStatus = (platformKey) => {
+        const isPublished = annonce[`Publié_${platformKey.charAt(0).toUpperCase() + platformKey.slice(1)}`];
+        const isPending = annonce[`${platformKey}Request`] && !isPublished;
+
+        if (isPublished) return { label: 'Publié', color: 'text-green-600 bg-green-50 border-green-200', icon: CheckCircle };
+        if (isPending) return { label: 'En attente...', color: 'text-orange-600 bg-orange-50 border-orange-200', icon: Loader2 };
+        return { label: 'Non publié', color: 'text-gray-500 bg-gray-50 border-gray-200', icon: null };
+    };
+
+    const StatusBadge = ({ platform }) => {
+        const { label, color, icon: Icon } = getStatus(platform);
+        return (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${color}`}>
+                {Icon && <Icon size={12} className={Icon === Loader2 ? "animate-spin" : ""} />}
+                {label}
+            </span>
+        );
+    };
+
     return (
-        <div className="space-y-4">
-            <div className="space-y-3">
-                <label className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-50 rounded transition-colors border border-transparent hover:border-gray-200">
-                    <input
-                        type="checkbox"
-                        checked={platforms.facebook}
-                        onChange={(e) => setPlatforms({ ...platforms, facebook: e.target.checked })}
-                        className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                        disabled={annonce.Publié_Facebook}
-                    />
-                    <span className={annonce.Publié_Facebook ? "text-green-600 font-medium flex items-center" : "text-gray-700 font-medium"}>
-                        {annonce.Publié_Facebook ? <><Check size={16} className="mr-1" /> Sur Facebook Marketplace</> : "Facebook Marketplace"}
-                    </span>
-                </label>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <Share2 className="text-blue-600" size={24} />
+                        Diffusion Multi-Canal
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">Sélectionnez les plateformes</p>
+                </div>
 
-                <label className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-50 rounded transition-colors border border-transparent hover:border-gray-200">
-                    <input
-                        type="checkbox"
-                        checked={platforms.lbc}
-                        onChange={(e) => setPlatforms({ ...platforms, lbc: e.target.checked })}
-                        className="h-5 w-5 text-orange-600 rounded border-gray-300 focus:ring-orange-500"
-                        disabled={annonce.Publié_LBC}
-                    />
-                    <span className={annonce.Publié_LBC ? "text-green-600 font-medium flex items-center" : "text-gray-700 font-medium"}>
-                        {annonce.Publié_LBC ? <><Check size={16} className="mr-1" /> Sur Le Bon Coin</> : "Le Bon Coin"}
-                    </span>
-                </label>
-
-                <label className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-50 rounded transition-colors border border-transparent hover:border-gray-200">
-                    <input
-                        type="checkbox"
-                        checked={platforms.seloger}
-                        onChange={(e) => setPlatforms({ ...platforms, seloger: e.target.checked })}
-                        className="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500"
-                        disabled={annonce.Publié_SeLoger}
-                    />
-                    <span className={annonce.Publié_SeLoger ? "text-green-600 font-medium flex items-center" : "text-gray-700 font-medium"}>
-                        {annonce.Publié_SeLoger ? <><Check size={16} className="mr-1" /> Sur SeLoger / MeilleursAgents</> : "SeLoger"}
-                    </span>
-                </label>
-
-                <label className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-50 rounded transition-colors border border-transparent hover:border-gray-200">
-                    <input
-                        type="checkbox"
-                        checked={platforms.bienici}
-                        onChange={(e) => setPlatforms({ ...platforms, bienici: e.target.checked })}
-                        className="h-5 w-5 text-yellow-600 rounded border-gray-300 focus:ring-yellow-500"
-                        disabled={annonce.Publié_BienIci}
-                    />
-                    <span className={annonce.Publié_BienIci ? "text-green-600 font-medium flex items-center" : "text-gray-700 font-medium"}>
-                        {annonce.Publié_BienIci ? <><Check size={16} className="mr-1" /> Sur Bien'ici</> : "Bien'ici"}
-                    </span>
-                </label>
+                <div className="flex flex-col items-end gap-1">
+                    {loading ? (
+                        <div className="flex items-center gap-2 text-blue-600 font-medium">
+                            <Loader2 className="animate-spin" /> Traitement...
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3">
+                            <a
+                                href="/download"
+                                target="_blank"
+                                className="text-xs text-blue-500 hover:text-blue-700 hover:underline flex items-center gap-1 transition-colors"
+                            >
+                                <Download size={14} /> Installer l'Assistant
+                            </a>
+                            <Button
+                                onClick={handlePublish}
+                                disabled={Object.values(platforms).every(v => !v)}
+                                className="bg-blue-600 hover:bg-blue-700 shadow-md transition-all active:scale-95"
+                            >
+                                <Send size={18} className="mr-2" />
+                                Lancer
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </div>
 
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { id: 'facebook', label: 'Facebook Marketplace', icon: Facebook },
+                    { id: 'lbc', label: 'LeBonCoin', icon: ShoppingBag }, // Using generic icon
+                    { id: 'seloger', label: 'SeLoger', icon: Home },
+                    { id: 'bienici', label: "Bien'ici", icon: MapPin }
+                ].map((platform) => {
+                    const status = getStatus(platform.id);
+                    const isPublished = status.label === 'Publié';
+                    const isPending = status.label === 'En attente...';
+
+                    return (
+                        <div
+                            key={platform.id}
+                            onClick={() => !isPublished && !isPending && setPlatforms(prev => ({ ...prev, [platform.id]: !prev[platform.id] }))}
+                            className={`
+                                relative p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col gap-3
+                                ${isPublished ? 'border-green-100 bg-green-50/30 opacity-70 cursor-default' :
+                                    isPending ? 'border-orange-100 bg-orange-50/30 cursor-wait' :
+                                        platforms[platform.id] ? 'border-blue-500 bg-blue-50/50 shadow-md ring-1 ring-blue-500' : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50'}
+                            `}
+                        >
+                            <div className="flex justify-between items-start">
+                                <div className={`p-2 rounded-lg ${isPublished ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}`}>
+                                    <platform.icon size={20} />
+                                </div>
+                                <StatusBadge platform={platform.id} />
+                            </div>
+
+                            <div>
+                                <h3 className="font-semibold text-gray-700">{platform.label}</h3>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {isPublished ? 'En ligne depuis récemment' : isPending ? 'Publication en cours...' : 'Prêt à publier'}
+                                </p>
+                            </div>
+
+                            {/* Selection Checkbox Visual */}
+                            {!isPublished && !isPending && (
+                                <div className={`absolute top-4 right-4 w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${selectedPlatforms[platform.id] ? 'bg-blue-500 border-blue-500' : 'border-gray-300 bg-white'}`}>
+                                    {selectedPlatforms[platform.id] && <CheckCircle size={14} className="text-white" />}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Status Messages Area */}
             {status && (
-                <div className={`p-3 rounded-md text-sm border ${status.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                    {status.message}
+                <div className={`mx-6 mb-6 p-4 rounded-lg flex items-center gap-3 ${status.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                    {status.type === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
+                    <p className="font-medium">{status.message}</p>
                 </div>
             )}
-
-            <Button
-                onClick={handlePublish}
-                className="w-full"
-                disabled={!platforms.facebook && !platforms.seloger && !platforms.lbc && !platforms.bienici}
-                isLoading={loading}
-            >
-                Publier la sélection
-            </Button>
-        </div>
+        </div >
     );
 }

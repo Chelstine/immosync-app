@@ -20,9 +20,26 @@ export default function AnnonceCard({ annonce }) {
                     </div>
                 )}
                 <div className="absolute top-2 right-2 flex space-x-1">
-                    {annonce.Publié_SeLoger && <span title="Publié SeLoger" className="bg-blue-100 p-1 rounded-full text-blue-600"><CheckCircle size={14} /></span>}
-                    {annonce.Publié_Bienici && <span title="Publié BienCI" className="bg-yellow-100 p-1 rounded-full text-yellow-600"><CheckCircle size={14} /></span>}
-                    {annonce.Publié_Facebook && <span title="Publié Facebook" className="bg-blue-600 p-1 rounded-full text-white"><CheckCircle size={14} /></span>}
+                    {/* Facebook */}
+                    {annonce.Publié_Facebook ? (
+                        <span title="Publié Facebook" className="bg-blue-600 p-1.5 rounded-full text-white shadow-sm border border-transparent"><CheckCircle size={14} strokeWidth={3} /></span>
+                    ) : (annonce.Facebook_Request && (
+                        <span title="En attente Facebook" className="bg-orange-100 p-1.5 rounded-full text-orange-600 animate-pulse border border-orange-200"><CheckCircle size={14} className="opacity-50" /></span>
+                    ))}
+
+                    {/* LeBonCoin */}
+                    {annonce.Publié_LBC ? (
+                        <span title="Publié LBC" className="bg-orange-500 p-1.5 rounded-full text-white shadow-sm border border-transparent"><CheckCircle size={14} strokeWidth={3} /></span>
+                    ) : (annonce.LBC_Request && (
+                        <span title="En attente LBC" className="bg-orange-100 p-1.5 rounded-full text-orange-600 animate-pulse border border-orange-200"><CheckCircle size={14} className="opacity-50" /></span>
+                    ))}
+
+                    {/* SeLoger */}
+                    {annonce.Publié_SeLoger ? (
+                        <span title="Publié SeLoger" className="bg-blue-100 p-1.5 rounded-full text-blue-800 shadow-sm border border-transparent"><CheckCircle size={14} strokeWidth={3} /></span>
+                    ) : (annonce.SeLoger_Request && (
+                        <span title="En attente SeLoger" className="bg-orange-100 p-1.5 rounded-full text-orange-600 animate-pulse border border-orange-200"><CheckCircle size={14} className="opacity-50" /></span>
+                    ))}
                 </div>
             </div>
             <div className="p-4 flex-1 flex flex-col">

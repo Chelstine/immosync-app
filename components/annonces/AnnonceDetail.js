@@ -327,8 +327,8 @@ function PublicationSection({ annonce }) {
 
                             {/* Selection Checkbox Visual */}
                             {!isPublished && !isPending && (
-                                <div className={`absolute top-4 right-4 w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${selectedPlatforms[platform.id] ? 'bg-blue-500 border-blue-500' : 'border-gray-300 bg-white'}`}>
-                                    {selectedPlatforms[platform.id] && <CheckCircle size={14} className="text-white" />}
+                                <div className={`absolute top-4 right-4 w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${platforms[platform.id] ? 'bg-blue-500 border-blue-500' : 'border-gray-300 bg-white'}`}>
+                                    {platforms[platform.id] && <CheckCircle size={14} className="text-white" />}
                                 </div>
                             )}
                         </div>

@@ -4,8 +4,8 @@ const JavaScriptObfuscator = require('javascript-obfuscator');
 
 // C:\Users\Chelstine\Desktop\NOVEK\ImmoSync\immosync-app
 const APP_DIR = __dirname;
-// C:\Users\Chelstine\Desktop\NOVEK\ImmoSync-Client-Release
-const DIST_DIR = path.join(APP_DIR, '..', '..', 'ImmoSync-Client-Release');
+// C:\Users\Chelstine\Desktop\NOVEK\ImmoSync\ImmoSync-Client-Release (inside project)
+const DIST_DIR = path.join(APP_DIR, '..', 'ImmoSync-Client-Release');
 
 console.log(`📂 Source: ${APP_DIR}`);
 console.log(`📂 Destination: ${DIST_DIR}`);

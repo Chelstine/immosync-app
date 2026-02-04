@@ -1,6 +1,6 @@
-require('dotenv').config({ path: '../.env.local' });
-const Airtable = require('airtable');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
+const Airtable = require('airtable');
 const fs = require('fs');
 const https = require('https');
 const { exec } = require('child_process');
@@ -14,19 +14,26 @@ const POLL_INTERVAL_MS = 10000; // Check every 10 seconds
 console.log("🕵️  Agent de Surveillance Démarré...");
 console.log("En attente de demandes de publication (Statut: 'Pending')...");
 
+// Track processed records to prevent infinite loops
+const processedRecords = new Set();
+
 async function checkQueue() {
     try {
-        // Find records where (Facebook_Request=TRUE AND Publié_Facebook!=TRUE) OR (LBC_Request=TRUE AND Publié_LBC!=TRUE)
-        // Airtable formula: OR(AND({Facebook_Request}, NOT({Publié_Facebook})), AND({LBC_Request}, NOT({Publié_LBC})))
-        const filterFormula = "OR(AND({Facebook_Request}, NOT({Publié_Facebook})), AND({LBC_Request}, NOT({Publié_LBC})))";
+        // Find records where (Facebook_Request=TRUE AND Publié_Facebook!=TRUE) OR (LBC_Request=TRUE AND Copié_LBC!=TRUE)
+        // Airtable formula: OR(AND({Facebook_Request}, NOT({Publié_Facebook})), AND({LBC_Request}, NOT({Copié_LBC})))
+        const filterFormula = "OR(AND({Facebook_Request}, NOT({Publié_Facebook})), AND({LBC_Request}, NOT({Copié_LBC})))";
 
         const records = await base('Annonces_IA').select({
             filterByFormula: filterFormula,
-            maxRecords: 1 // Process one by one
+            maxRecords: 5 // Get a few to find one not already processed
         }).firstPage();
 
-        if (records.length > 0) {
-            const record = records[0];
+        // Find first record not already being processed
+        const record = records.find(r => !processedRecords.has(r.id));
+
+        if (record) {
+            processedRecords.add(record.id);
+            console.log(`📝 Ajout de ${record.id} à la liste de traitement...`);
             await processAnnonce(record);
         }
     } catch (error) {
@@ -62,12 +69,12 @@ async function processAnnonce(record) {
     // 2. DOWNLOAD PHOTOS (Cloud Compatibility Upgrade) ☁️ -> 💻
     const photos = [];
 
-    // Check if Bien has photos in Airtable
-    if (bien.Photo_Bien && bien.Photo_Bien.length > 0) {
+    // Check if Annonce has photos in Airtable (Photo_Bien is in Annonces_IA, not Biens_Immo)
+    if (annonce.Photo_Bien && annonce.Photo_Bien.length > 0) {
         const downloadDir = path.join(process.cwd(), 'temp', `downloads`, `bien-${bienId}`);
         if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
 
-        console.log(`⬇️ Téléchargement de ${bien.Photo_Bien.length} photos depuis le Cloud...`);
+        console.log(`⬇️ Téléchargement de ${annonce.Photo_Bien.length} photos depuis le Cloud...`);
 
         // Helper to download a single file
         const downloadFile = (url, dest) => {
@@ -86,8 +93,8 @@ async function processAnnonce(record) {
         };
 
         // Download all photos sequentially
-        for (let i = 0; i < bien.Photo_Bien.length; i++) {
-            const photoData = bien.Photo_Bien[i];
+        for (let i = 0; i < annonce.Photo_Bien.length; i++) {
+            const photoData = annonce.Photo_Bien[i];
             const ext = path.extname(photoData.filename) || '.jpg';
             const destPath = path.join(downloadDir, `photo-${i}${ext}`);
 
@@ -100,7 +107,7 @@ async function processAnnonce(record) {
         }
         console.log(`\n✅ ${photos.length} photos téléchargées localement.`);
     } else {
-        console.warn("⚠️ Aucune photo trouvée dans la fiche Airtable du Bien.");
+        console.warn("⚠️ Aucune photo trouvée dans la fiche Airtable de l'Annonce.");
     }
 
     // 3. Create Payload File
@@ -131,6 +138,11 @@ async function processAnnonce(record) {
                 if (error) {
                     console.error(`❌ Échec FB (Voir logs)`);
                     console.error(stderr);
+                    // ALWAYS clear request to prevent infinite loop
+                    try {
+                        await base('Annonces_IA').update(annonceId, { 'Facebook_Request': false });
+                        console.log("⚠️ Facebook_Request désactivé pour éviter boucle infinie.");
+                    } catch (e) { console.error("Err clearing FB request", e); }
                 } else {
                     console.log(`✅ Succès FB !`);
                     try {
@@ -143,7 +155,7 @@ async function processAnnonce(record) {
     }
 
     // --- LEBONCOIN ---
-    if (annonce.LBC_Request && !annonce.Publié_LBC) {
+    if (annonce.LBC_Request && !annonce.Copié_LBC) {
         console.log("🟧 Lancement du Robot LeBonCoin...");
         const lbcScript = path.join(__dirname, 'publish-leboncoin.js');
 
@@ -152,10 +164,15 @@ async function processAnnonce(record) {
                 if (error) {
                     console.error(`❌ Échec LBC (Voir logs)`);
                     console.error(stderr);
+                    // ALWAYS clear request to prevent infinite loop
+                    try {
+                        await base('Annonces_IA').update(annonceId, { 'LBC_Request': false });
+                        console.log("⚠️ LBC_Request désactivé pour éviter boucle infinie.");
+                    } catch (e) { console.error("Err clearing LBC request", e); }
                 } else {
                     console.log(`✅ Succès LBC !`);
                     try {
-                        await base('Annonces_IA').update(annonceId, { 'Publié_LBC': true, 'LBC_Request': false });
+                        await base('Annonces_IA').update(annonceId, { 'Copié_LBC': true, 'LBC_Request': false });
                     } catch (e) { console.error("Err Update Airtable LBC", e); }
                 }
                 resolve();

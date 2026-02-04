@@ -62,7 +62,7 @@ function build() {
 
     // 4. Copy Installers (from Parent folder ImmoSync)
     const PARENT_DIR = path.join(APP_DIR, '..');
-    ['INSTALL_AGENT.bat', 'Start-ImmoSync.bat', 'GÉRER_COMPTES.bat', 'launcher.vbs'].forEach(file => {
+    ['INSTALL_AGENT.bat', 'Start-ImmoSync.bat', 'GÉRER_COMPTES.bat'].forEach(file => {
         const src = path.join(PARENT_DIR, file);
         if (fs.existsSync(src)) {
             fs.copyFileSync(src, path.join(DIST_DIR, file));

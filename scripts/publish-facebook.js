@@ -25,7 +25,7 @@ async function run() {
 
     const browser = await chromium.launch({
         headless: false,
-        channel: 'chrome'
+        channel: 'chrome' // Use installed Chrome
     });
 
     const context = await browser.newContext({
@@ -49,7 +49,29 @@ async function run() {
         await fileInput.setInputFiles(listing.photos);
         await page.waitForTimeout(3000);
 
-        // 2. 🏠 TYPE DE BIEN (Property Type)
+        // 2. 📍 ADRESSE / LIEU (Location) - MOVED FIRST TO FIX CURRENCY (FCFA -> €)
+        console.log("Setting Location (First to fix Currency)...");
+        const locInput = page.getByLabel('Lieu', { exact: false })
+            .or(page.getByLabel('Adresse de la propriété'))
+            .or(page.getByLabel('Location'))
+            .or(page.getByLabel('Adresse')); // General fallback
+
+        if (await locInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+            await locInput.click();
+            await page.waitForTimeout(500);
+
+            // Clear potential default value
+            await page.keyboard.press('Control+A');
+            await page.keyboard.press('Backspace');
+
+            await page.keyboard.type(listing.city);
+            await page.waitForTimeout(2000); // Wait for dropdown suggestions
+            await page.keyboard.press('ArrowDown');
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(2000); // Allow FB to update currency based on location
+        }
+
+        // 3. 🏠 TYPE DE BIEN (Property Type)
         console.log("Setting Property Type...");
         const typeInput = page.getByLabel('Type de propriété', { exact: false })
             .or(page.getByLabel('Type de bien'))
@@ -78,7 +100,7 @@ async function run() {
             await page.waitForTimeout(1000);
         }
 
-        // 3. 🛏️ CHAMBRES (Bedrooms)
+        // 4. 🛏️ CHAMBRES (Bedrooms)
         console.log("Setting Bedrooms...");
         const bedroomsInput = page.getByLabel('Nombre de chambres', { exact: false })
             .or(page.getByLabel('Chambres'))
@@ -93,7 +115,7 @@ async function run() {
             await page.waitForTimeout(500);
         }
 
-        // 4. 🚿 SALLES DE BAIN (Bathrooms)
+        // 5. 🚿 SALLES DE BAIN (Bathrooms)
         console.log("Setting Bathrooms...");
         const bathInput = page.getByLabel('Nombre de salles de bain', { exact: false })
             .or(page.getByLabel('Salles de bain'))
@@ -107,7 +129,7 @@ async function run() {
             await page.waitForTimeout(500);
         }
 
-        // 5. 💶 PRIX (Price/Rent)
+        // 6. 💶 PRIX (Price/Rent)
         console.log("Setting Price...");
         const priceInput = page.getByLabel('Prix par mois', { exact: false })
             .or(page.getByLabel('Loyer'))
@@ -115,28 +137,6 @@ async function run() {
 
         if (await priceInput.isVisible({ timeout: 3000 }).catch(() => false)) {
             await priceInput.fill(listing.price.toString());
-        }
-
-        // 6. 📍 ADRESSE / LIEU (Location)
-        console.log("Setting Location...");
-        const locInput = page.getByLabel('Lieu', { exact: false })
-            .or(page.getByLabel('Adresse de la propriété'))
-            .or(page.getByLabel('Location'))
-            .or(page.getByLabel('Adresse')); // General fallback
-
-        if (await locInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-            await locInput.click();
-            await page.waitForTimeout(500);
-
-            // Clear potential default value
-            await page.keyboard.press('Control+A');
-            await page.keyboard.press('Backspace');
-
-            await page.keyboard.type(listing.city);
-            await page.waitForTimeout(2000); // Wait for dropdown
-            await page.keyboard.press('ArrowDown');
-            await page.keyboard.press('Enter');
-            await page.waitForTimeout(1000);
         }
 
         // 7. 📝 DESCRIPTION
@@ -181,7 +181,10 @@ async function run() {
             await titleInput.fill(listing.title);
         }
 
-        // 10. 🚀 PUBLISH
+        console.log("Waiting for form validation...");
+        await page.waitForTimeout(2000);
+
+        // 11. 🚀 PUBLISH
         console.log("Looking for Next/Publish buttons...");
         const nextBtn = page.getByRole('button', { name: 'Suivant' });
 
@@ -206,6 +209,7 @@ async function run() {
 
         // Close browser after success
         await browser.close();
+        process.exit(0);
 
     } catch (e) {
         console.error("❌ Error during ghost publishing:", e.message);
